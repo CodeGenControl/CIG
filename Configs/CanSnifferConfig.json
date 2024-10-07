@@ -1,0 +1,86 @@
+{
+  "header_file": "CanSniffer",
+  "DevicesToDecode": {
+    "isabel": {
+      "name": "isabel",
+      "msgs": {
+        "isa_energy": {
+          "name": "isa_energy",
+          "signals": ["isa_energy"],
+          "topic": "/isabel/isa_energy",
+          "type": "std_msgs/msg/Float32",
+          "publisher_name": "pub_isa_energy",
+          "qos_history_depth": 10
+        }
+      }
+    },
+    "master": {
+      "name": "master",
+      "msgs": {
+        "master_em": {
+          "name": "master_em",
+          "signals": ["max_pwr", "master_em_soc"],
+          "topic": "/master/master_em",
+          "type": "std_msgs/msg/Float32MultiArray",
+          "publisher_name": "pub_master_em",
+          "qos_history_depth": 10
+        },
+        "cell_tmp_info": {
+          "name": "cell_tmp_info",
+          "signals": ["cell_max_tmp"],
+          "topic": "/master/cell_tmp_info",
+          "type": "std_msgs/msg/Float32MultiArray",
+          "publisher_name": "pub_cell_tmp_info",
+          "qos_history_depth": 10
+        }
+      }
+    },
+    "te": {
+      "name": "te",
+      "msgs": {
+        "te_main": {
+          "name": "te_main",
+          "signals": ["te_main_app"],
+          "topic": "/te/te_main",
+          "type": "std_msgs/msg/Float32MultiArray",
+          "publisher_name": "pub_te_main",
+          "qos_history_depth": 10
+        }
+      }
+    }
+  },
+  "Controllers": {
+    "Pipeline": {
+      "safety_guards": "Pipeline",
+      "name": "ControllerPipeline",
+      "includes": ["TorqueVectoring/torque_vectoring.h"],
+      "matlab_code_class": [
+        {
+          "object_name": "torque_vectoring",
+          "class_name": "TorqueVectoring",
+          "startup_functions": ["init", "start"],
+          "loop_function": [{ "name": "loop", "timestep": 10, "unit": "ms" }],
+          "shutdown_functions": ["stop"],
+          "inputs": {
+            "te_main": [{ "signal": "te_main_apps", "variable": "te_main_apps" }],
+            "master_em": [{ "signal": "soc", "variable": "master_em_soc" }]
+          }
+        },
+        {
+          "object_name": "traction_controller",
+          "class_name": "TractionController",
+          "startup_functions": ["init"],
+          "loop_function": [{ "name": "loop", "timestep": 100, "unit": "ms" }],
+          "shutdown_functions": ["stop"],
+          "inputs": {
+            "te_main": [{ "signal": "te_main_apps", "variable": "te_main_apps" }],
+            "mater_em": [
+              { "signal": "max_pwr", "variable": "max_pwr" },
+              { "signal": "master_em_soc", "variable": "master_em_soc" }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

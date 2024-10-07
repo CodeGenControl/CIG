@@ -1,0 +1,35 @@
+
+#ifndef __CANSNIFFER_PIPELINE_HPP__
+#define __CANSNIFFER_PIPELINE_HPP__
+
+#include <chrono>
+#include <iostream>
+
+#include "rclcpp/rclcpp.hpp"
+{% set included_types = [] %}
+{%- for device_name, device_info in DevicesToDecode.items() -%}
+    {%- for msg_name, msg_info in device_info.msgs.items() -%}
+        {%- if msg_info.type not in included_types +%}
+#include "{{ msg_info.type | replace('/', '_') }}.hpp"
+            {%- set _ = included_types.append(msg_info.type) -%}
+        {%- endif -%}
+    {%- endfor -%}
+{%- endfor +%}
+
+class CanSnifferPipeline : public rclcpp::Node {
+public:
+    CanSnifferPipeline();
+    ~CanSnifferPipeline();
+
+    void init_publishers();
+
+    void decode_can_message();
+
+    {%- for device_name, device_info in DevicesToDecode.items() %}
+        {%- for msg_name, msg_info in device_info.msgs.items() %}
+    {{ "rclcpp::Publisher<" + msg_info.type + "> " + msg_info.publisher_name + ";" }}
+        {%- endfor -%}
+    {%- endfor %}
+};
+
+#endif // __CANSNIFFER_PIPELINE_HPP__

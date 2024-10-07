@@ -1,0 +1,45 @@
+{%- for ControllerName, ControllerData in Controllers.items() -%}
+
+#ifndef __{{ ControllerData.safety_guards }}__H
+#define __{{ ControllerData.safety_guards }}__H
+
+#include <rclcpp/rclcpp.hpp>
+#include <rclcpp/TimerBase.hpp>
+
+{%- for Include in ControllerData.includes %}
+#include "{{ Include }}"
+{%- endfor %}
+
+class {{ ControllerName }} : public rclcpp::Node
+{
+public:
+    {{ ControllerName }}();
+    ~{{ ControllerName }}();
+
+    {% for inputName, inputData in ControllerData.inputs.items() %}
+        {%- for device, deviceData in DevicesToDecode.items() %}
+            {%- for msgName, msgData in deviceData.msgs.items() %}
+                {%- if inputName == msgName %}
+                {%- set topic_name = msgData.topic %}
+                {%- set message_type = msgData.type %}
+    rclcpp::Subcription <{{message_type}}> {{inputName}}_subscription;
+    void {{input_name}}_callback(const {{message_type}}::SharedPtr msg);
+                {%- endif %}
+            {%- endfor %}
+        {%- endfor %}
+    {%- endfor %}
+
+
+
+private:
+    void timer_callback();
+
+    rclcpp::TimerBase::SharedPtr timer;
+
+
+
+};
+
+#endif // __{{ ControllerData.safety_guards }}__H
+
+{%- endfor %}

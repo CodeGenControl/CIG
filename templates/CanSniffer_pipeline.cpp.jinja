@@ -1,0 +1,54 @@
+#include "{{header_file}}.hpp"
+
+CanSnifferPipeline::CanSnifferPipeline() {
+    this->init_publishers();
+}
+
+CanSnifferPipeline::~CanSnifferPipeline() {
+    // Clean up the pipeline
+}
+
+
+void CanSnifferPipeline::init_publishers() {
+    {%- for device_name, device_info  in DevicesToDecode.items()%}
+        {%-for msg_name, msg_info in device_info.msgs.items() %}
+    {{msg_info.publisher_name}} = create_publisher<{{msg_info.type}}> ("{{msg_info.topic}}", {{msg_info.qos_history_depth}});
+        {%-endfor%}
+    {%- endfor %}
+}
+
+void CanSnifferPipeline::decode_can_message(CANdata msg) {
+    std::pair <std::string, std::map <std::string, double>> decoded_msg;
+    std::string deviceName = "" ;
+    std::string messageName = "" ;
+
+    try {
+        decoded_msg = fcp.decode_msg(msg);
+    }
+    catch (const std::exception& e) {
+        return;
+    }
+
+    deviceName = fcp.get_dev_name(msg.sid);
+    messageName = fcp.get_msg_name(msg.sid);
+
+    {% for device_name, device_info in DevicesToDecode.items() %}
+    if (deviceName == "{{ device_name }}") {
+        {%- for msg_name, msg_info in device_info.msgs.items() %}
+        if (messageName == "{{ msg_name }}") {
+            {{ msg_info.type | replace('/', '::') }} msg;
+            {% if "MultiArray" in msg_info.type %}
+            msg.data.resize({{ msg_info.signals | length }});
+                {%- for signal in msg_info.signals %}
+            msg[{{ loop.index0 }}] = decoded_msg.second["{{ signal }}"];
+                {%- endfor %}
+            {%- else -%}
+            msg.data = decoded_msg.second["{{ msg_info.signals[0] }}"];
+            {%- endif %}
+
+            {{ msg_info.publisher_name }}.publish(msg);
+        }
+        {%- endfor %}
+    }
+    {%- endfor %}
+}
